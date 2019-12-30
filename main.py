@@ -19,6 +19,7 @@ parser = argparse.ArgumentParser(description='PyTorch CIFAR10 Training')
 parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
 parser.add_argument('--resume', '-r', action='store_true', help='resume from checkpoint')
 parser.add_argument('--ckpt',default=0, type=int, help='which ckpt to load (default: 0)')
+parser.add_argument('--depth',default=0, type=int, help='which network to train (default: 0)')
 
 args = parser.parse_args()
 
@@ -48,10 +49,12 @@ testloader = torch.utils.data.DataLoader(testset, batch_size=100, shuffle=False,
 
 classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
 
+
 # Model
 print('==> Building model..')
 # net = VGG('VGG19')
-net = ResNet18()
+# net = ResNet18()
+net = ResNet20()
 # net = PreActResNet18()
 # net = GoogLeNet()
 # net = DenseNet121()
@@ -72,7 +75,7 @@ if args.resume:
     # Load checkpoint.
     print('==> Resuming from checkpoint..')
     assert os.path.isdir('checkpoint'), 'Error: no checkpoint directory found!'
-    checkpoint = torch.load('/shared/hj14/cifar10-dataset/ckpt-resnet18/ckpt-{0}.pth'.format(args.ckpt))
+    checkpoint = torch.load('/shared/hj14/cifar10-dataset/ckpt-resnet{0}/ckpt-{1}.pth'.format(args.depth, args.ckpt))
     # print(checkpoint)
     # checkpoint = torch.load('/shared/hj14/cifar10-dataset/ckpt/ckpt.pth')
     net.load_state_dict(checkpoint['net'])
@@ -91,11 +94,11 @@ def train(epoch):
     total = 0
 
     if epoch < 100:
-        optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
+        optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9, weight_decay=1e-4)
     elif epoch < 150:
-        optimizer = optim.SGD(net.parameters(), lr=args.lr/10, momentum=0.9, weight_decay=5e-4)
+        optimizer = optim.SGD(net.parameters(), lr=args.lr/10, momentum=0.9, weight_decay=1e-4)
     else:
-        optimizer = optim.SGD(net.parameters(), lr=args.lr/100, momentum=0.9, weight_decay=5e-4)
+        optimizer = optim.SGD(net.parameters(), lr=args.lr/100, momentum=0.9, weight_decay=1e-4)
 
     for batch_idx, (inputs, targets) in enumerate(trainloader):
         inputs, targets = inputs.to(device), targets.to(device)
@@ -147,8 +150,8 @@ def test(epoch):
     }
     # if not os.path.isdir('checkpoint'):
     #     os.mkdir('checkpoint')    
-    torch.save(state, '/shared/hj14/cifar10-dataset/ckpt-resnet18/ckpt-{0}.pth'.format(epoch))
+    torch.save(state, '/shared/hj14/cifar10-dataset/ckpt-resnet{0}/ckpt-{1}.pth'.format(args.depth,epoch))
         
-for epoch in range(start_epoch, max(200,start_epoch+200)):
+for epoch in range(start_epoch, min(200,start_epoch+200)):
     train(epoch)
     test(epoch)
