@@ -54,7 +54,16 @@ classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship'
 print('==> Building model..')
 # net = VGG('VGG19')
 # net = ResNet18()
-net = ResNet20()
+if args.depth == 20:
+    net = ResNet20()
+elif args.depth == 32:
+    net = ResNet32()
+elif args.depth == 44:
+    net = ResNet44()
+elif args.depth == 56:
+    net = ResNet56()
+else:
+    print ("wrong depth")
 # net = PreActResNet18()
 # net = GoogLeNet()
 # net = DenseNet121()
@@ -73,11 +82,18 @@ if device == 'cuda':
 
 if args.resume:
     # Load checkpoint.
-    print('==> Resuming from checkpoint..')
-    assert os.path.isdir('checkpoint'), 'Error: no checkpoint directory found!'
+    print('==> Resuming from checkpoint {0}-{1}'.format(args.depth, args.ckpt))
+    assert os.path.isdir('/shared/hj14/cifar10-dataset/ckpt-resnet{0}'.format(args.depth)), 'Error: no checkpoint directory found!'
     checkpoint = torch.load('/shared/hj14/cifar10-dataset/ckpt-resnet{0}/ckpt-{1}.pth'.format(args.depth, args.ckpt))
     # print(checkpoint)
+    # print(checkpoint['net'])
+    # for key, v in enumerate(checkpoint['net']):
+    #     print (key, v)
     # checkpoint = torch.load('/shared/hj14/cifar10-dataset/ckpt/ckpt.pth')
+    
+    # for param_tensor in net.state_dict():
+    #     print(param_tensor, "\t", net.state_dict()[param_tensor].size())
+
     net.load_state_dict(checkpoint['net'])
     best_acc = checkpoint['acc']
     start_epoch = checkpoint['epoch']
@@ -125,33 +141,36 @@ def test(epoch):
     with torch.no_grad():
         for batch_idx, (inputs, targets) in enumerate(testloader):
             inputs, targets = inputs.to(device), targets.to(device)
-            #if (batch_idx == ): //for furthre sparsity testing
-            outputs = net(inputs)
-            loss = criterion(outputs, targets)
-            
-            test_loss += loss.item()
-            _, predicted = outputs.max(1)
-            total += targets.size(0)
-            correct += predicted.eq(targets).sum().item()
+            if (batch_idx == 50): #for furthre sparsity testing
+                outputs = net(inputs)
+                loss = criterion(outputs, targets)
+                
+                test_loss += loss.item()
+                _, predicted = outputs.max(1)
+                total += targets.size(0)
+                correct += predicted.eq(targets).sum().item()
 
-            progress_bar(batch_idx, len(testloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
-                % (test_loss/(batch_idx+1), 100.*correct/total, correct, total))
+                # progress_bar(batch_idx, len(testloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
+                #     % (test_loss/(batch_idx+1), 100.*correct/total, correct, total))
 
     # Save checkpoint.
-    acc = 100.*correct/total
-    if acc > best_acc:
-        print('Saving..')
-        best_acc = acc
+    # acc = 100.*correct/total
+    # if acc > best_acc:
+    #     print('Saving..')
+    #     best_acc = acc
 
-    state = {
-        'net': net.state_dict(),
-        'acc': acc,
-        'epoch': epoch,
-    }
-    # if not os.path.isdir('checkpoint'):
-    #     os.mkdir('checkpoint')    
-    torch.save(state, '/shared/hj14/cifar10-dataset/ckpt-resnet{0}/ckpt-{1}.pth'.format(args.depth,epoch))
+    # state = {
+    #     'net': net.state_dict(),
+    #     'acc': acc,
+    #     'epoch': epoch,
+    # }
+    # # if not os.path.isdir('checkpoint'):
+    # #     os.mkdir('checkpoint')    
+    # torch.save(state, '/shared/hj14/cifar10-dataset/ckpt-resnet{0}/ckpt-{1}.pth'.format(args.depth,epoch))
         
-for epoch in range(start_epoch, min(200,start_epoch+200)):
-    train(epoch)
+# for epoch in range(start_epoch, min(200,start_epoch+200)):
+#     train(epoch)
+#     test(epoch)
+for epoch in range(start_epoch, min(200,start_epoch+1)):
+    # train(epoch)
     test(epoch)

@@ -31,11 +31,11 @@ class BasicBlock(nn.Module):
 
     def forward(self, x):
         out = F.relu(self.bn1(self.conv1(x)))
-        #print(1-torch.nonzero(out).size(0)/torch.numel(out))
+        print(1-torch.nonzero(out).size(0)/torch.numel(out))
         out = self.bn2(self.conv2(out))
         out += self.shortcut(x)
         out = F.relu(out)
-        #print(1-torch.nonzero(out).size(0)/torch.numel(out))
+        print(1-torch.nonzero(out).size(0)/torch.numel(out))
         return out
 
 
