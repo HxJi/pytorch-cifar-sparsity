@@ -20,6 +20,9 @@ parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
 parser.add_argument('--resume', '-r', action='store_true', help='resume from checkpoint')
 parser.add_argument('--ckpt',default=0, type=int, help='which ckpt to load (default: 0)')
 parser.add_argument('--depth',default=0, type=int, help='which network to train (default: 0)')
+parser.add_argument('--train', default=1, type=int, help='train: 1, test: 0')
+parser.add_argument('--trb', default=128, type=int, help='train batch size (default:128)')
+parser.add_argument('--teb', default=100, type=int, help='test batch size (default:100)')
 
 args = parser.parse_args()
 
@@ -42,10 +45,10 @@ transform_test = transforms.Compose([
 ])
 
 trainset = torchvision.datasets.CIFAR10(root='/shared/hj14/cifar10-dataset', train=True, download=True, transform=transform_train)
-trainloader = torch.utils.data.DataLoader(trainset, batch_size=128, shuffle=True, num_workers=2)
+trainloader = torch.utils.data.DataLoader(trainset, batch_size=args.trb, shuffle=True, num_workers=4)
 
 testset = torchvision.datasets.CIFAR10(root='/shared/hj14/cifar10-dataset', train=False, download=True, transform=transform_test)
-testloader = torch.utils.data.DataLoader(testset, batch_size=100, shuffle=False, num_workers=2)
+testloader = torch.utils.data.DataLoader(testset, batch_size=args.teb, shuffle=False, num_workers=4)
 
 classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
 
@@ -61,7 +64,7 @@ elif args.depth == 32:
 elif args.depth == 44:
     net = ResNet44()
 elif args.depth == 56:
-    net = ResNet56()
+    net = ResNet56()    #93.72%
 else:
     print ("wrong depth")
 # net = PreActResNet18()
@@ -83,17 +86,8 @@ if device == 'cuda':
 if args.resume:
     # Load checkpoint.
     print('==> Resuming from checkpoint {0}-{1}'.format(args.depth, args.ckpt))
-    assert os.path.isdir('/shared/hj14/cifar10-dataset/ckpt-resnet{0}'.format(args.depth)), 'Error: no checkpoint directory found!'
-    checkpoint = torch.load('/shared/hj14/cifar10-dataset/ckpt-resnet{0}/ckpt-{1}.pth'.format(args.depth, args.ckpt))
-
-    # print(checkpoint)
-    # print(checkpoint['net'])
-    # for key, v in enumerate(checkpoint['net']):
-    #     print (key, v)
-    # checkpoint = torch.load('/shared/hj14/cifar10-dataset/ckpt/ckpt.pth')
-    
-    # for param_tensor in net.state_dict():
-    #     print(param_tensor, "\t", net.state_dict()[param_tensor].size())
+    assert os.path.isdir('/shared/hj14/cifar10-dataset/ckpt-resnet-{0}'.format(args.depth)), 'Error: no checkpoint directory found!'
+    checkpoint = torch.load('/shared/hj14/cifar10-dataset/ckpt-resnet-{0}/ckpt-{1}.pth'.format(args.depth, args.ckpt))
 
     net.load_state_dict(checkpoint['net'])
     best_acc = checkpoint['acc']
@@ -140,38 +134,54 @@ def test(epoch):
     correct = 0
     total = 0
     with torch.no_grad():
-        for batch_idx, (inputs, targets) in enumerate(testloader):
-            inputs, targets = inputs.to(device), targets.to(device)
-            # if (batch_idx == 50): #for furthre sparsity testing
-            outputs = net(inputs)
-            loss = criterion(outputs, targets)
-            
-            test_loss += loss.item()
-            _, predicted = outputs.max(1)
-            total += targets.size(0)
-            correct += predicted.eq(targets).sum().item()
+        if args.train:
+            for batch_idx, (inputs, targets) in enumerate(testloader):
+                inputs, targets = inputs.to(device), targets.to(device)
+                
+                outputs = net(inputs)
+                loss = criterion(outputs, targets)
+                
+                test_loss += loss.item()
+                _, predicted = outputs.max(1)
+                total += targets.size(0)
+                correct += predicted.eq(targets).sum().item()
 
-            progress_bar(batch_idx, len(testloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
-                % (test_loss/(batch_idx+1), 100.*correct/total, correct, total))
+                progress_bar(batch_idx, len(testloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
+                    % (test_loss/(batch_idx+1), 100.*correct/total, correct, total))
 
-    # Save checkpoint.
-    acc = 100.*correct/total
-    if acc > best_acc:
-        print('Saving..')
-        best_acc = acc
+            # Save checkpoint.
+            acc = 100.*correct/total 
+            if acc > best_acc:
+                print('Saving..')
+                best_acc = acc
 
-    state = {
-        'net': net.state_dict(),
-        'acc': acc,
-        'epoch': epoch,
-    }
-    if not os.path.isdir('/shared/hj14/cifar10-dataset/ckpt-resnet{0}'.format(args.depth)):
-        os.mkdir('/shared/hj14/cifar10-dataset/ckpt-resnet{0}'.format(args.depth))    
-    torch.save(state, '/shared/hj14/cifar10-dataset/ckpt-resnet{0}/ckpt-{1}.pth'.format(args.depth,epoch))
+            state = {
+                'net': net.state_dict(),
+                'acc': acc,
+                'epoch': epoch,
+            }
+            if not os.path.isdir('/shared/hj14/cifar10-dataset/ckpt-resnet-{0}'.format(args.depth)):
+                os.mkdir('/shared/hj14/cifar10-dataset/ckpt-resnet-{0}'.format(args.depth))    
+            torch.save(state, '/shared/hj14/cifar10-dataset/ckpt-resnet-{0}/ckpt-{1}.pth'.format(args.depth,epoch))
+
+        else:
+            for batch_idx, (inputs, targets) in enumerate(testloader):
+                inputs, targets = inputs.to(device), targets.to(device)
+                if (batch_idx == 50): #for furthre sparsity testing
+                    print('start test')
+                    outputs = net(inputs)
+                    loss = criterion(outputs, targets)
+                    
+                    test_loss += loss.item()
+                    _, predicted = outputs.max(1)
+                    total += targets.size(0)
+                    correct += predicted.eq(targets).sum().item()
         
-for epoch in range(start_epoch, min(200,start_epoch+200)):
-    train(epoch)
-    test(epoch)
 
-# for epoch in range(start_epoch, min(200,start_epoch+1)):
-#     test(epoch)
+if  args.train:
+    for epoch in range(start_epoch, min(200,start_epoch+200)):
+        train(epoch)
+        test(epoch)
+else:
+    for epoch in range(start_epoch, min(200,start_epoch+1)):
+        test(epoch)
