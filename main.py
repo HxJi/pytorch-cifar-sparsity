@@ -13,7 +13,7 @@ import argparse
 
 from models import *
 from utils import progress_bar
-
+from data_prep import *
 
 parser = argparse.ArgumentParser(description='PyTorch CIFAR10 Training')
 parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
@@ -21,7 +21,7 @@ parser.add_argument('--resume', '-r', action='store_true', help='resume from che
 parser.add_argument('--ckpt',default=0, type=int, help='which ckpt to load (default: 0)')
 parser.add_argument('--depth',default=0, type=int, help='which network to train (default: 0)')
 parser.add_argument('--train', default=1, type=int, help='train: 1, test: 0')
-parser.add_argument('--trb', default=128, type=int, help='train batch size (default:128)')
+parser.add_argument('--trb', default=128, type=int, help='train batch size (default:256)')
 parser.add_argument('--teb', default=100, type=int, help='test batch size (default:100)')
 
 args = parser.parse_args()
@@ -29,55 +29,41 @@ args = parser.parse_args()
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 best_acc = 0  # best test accuracy
 start_epoch = 0  # start from epoch 0 or last checkpoint epoch
+# create_val_img_folder(args)
 
 # Data
 print('==> Preparing data..')
 transform_train = transforms.Compose([
-    transforms.RandomCrop(32, padding=4),
     transforms.RandomHorizontalFlip(),
     transforms.ToTensor(),
-    transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+    transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
 ])
 
 transform_test = transforms.Compose([
     transforms.ToTensor(),
-    transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+    transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
 ])
 
-trainset = torchvision.datasets.CIFAR10(root='/shared/hj14/cifar10-dataset', train=True, download=True, transform=transform_train)
-trainloader = torch.utils.data.DataLoader(trainset, batch_size=args.trb, shuffle=True, num_workers=4)
+trainset = torchvision.datasets.ImageFolder(root='/shared/hj14/tiny-imagenet/tiny-imagenet-200/train', transform=transform_train)
+trainloader = torch.utils.data.DataLoader(trainset, batch_size=args.trb, shuffle=True, num_workers=8)
 
-testset = torchvision.datasets.CIFAR10(root='/shared/hj14/cifar10-dataset', train=False, download=True, transform=transform_test)
+testset = torchvision.datasets.ImageFolder(root='/shared/hj14/tiny-imagenet/tiny-imagenet-200/val/images', transform=transform_test)
 testloader = torch.utils.data.DataLoader(testset, batch_size=args.teb, shuffle=False, num_workers=4)
 
-classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
+# classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
 
 
 # Model
 print('==> Building model..')
-# net = VGG('VGG19')
-# net = ResNet18()
-if args.depth == 20:
-    net = ResNet20()
-elif args.depth == 32:
-    net = ResNet32()
-elif args.depth == 44:
-    net = ResNet44()
-elif args.depth == 56:
-    net = ResNet56()    #93.72%
+if args.depth == 18:
+    net = ResNet18()
+elif args.depth == 34:
+    net = ResNet34()
+elif args.depth == 50:
+    net = ResNet50()    
 else:
     print ("wrong depth")
-# net = PreActResNet18()
-# net = GoogLeNet()
-# net = DenseNet121()
-# net = ResNeXt29_2x64d()
-# net = MobileNet()
-# net = MobileNetV2()
-# net = DPN92()
-# net = ShuffleNetG2()
-# net = SENet18()
-# net = ShuffleNetV2(1)
-# net = EfficientNetB0()
+
 net = net.to(device)
 if device == 'cuda':
     net = torch.nn.DataParallel(net)
@@ -86,8 +72,8 @@ if device == 'cuda':
 if args.resume:
     # Load checkpoint.
     print('==> Resuming from checkpoint {0}-{1}'.format(args.depth, args.ckpt))
-    assert os.path.isdir('/shared/hj14/cifar10-dataset/ckpt-resnet-{0}'.format(args.depth)), 'Error: no checkpoint directory found!'
-    checkpoint = torch.load('/shared/hj14/cifar10-dataset/ckpt-resnet-{0}/ckpt-{1}.pth'.format(args.depth, args.ckpt))
+    assert os.path.isdir('/shared/hj14/tiny-imagenet/ckpt-resnet-{0}'.format(args.depth)), 'Error: no checkpoint directory found!'
+    checkpoint = torch.load('/shared/hj14/tiny-imagenet/ckpt-resnet-{0}/ckpt-{1}.pth'.format(args.depth, args.ckpt))
 
     net.load_state_dict(checkpoint['net'])
     best_acc = checkpoint['acc']
@@ -160,9 +146,9 @@ def test(epoch):
                 'acc': acc,
                 'epoch': epoch,
             }
-            if not os.path.isdir('/shared/hj14/cifar10-dataset/ckpt-resnet-{0}'.format(args.depth)):
-                os.mkdir('/shared/hj14/cifar10-dataset/ckpt-resnet-{0}'.format(args.depth))    
-            torch.save(state, '/shared/hj14/cifar10-dataset/ckpt-resnet-{0}/ckpt-{1}.pth'.format(args.depth,epoch))
+            if not os.path.isdir('/shared/hj14/tiny-imagenet/ckpt-resnet-{0}'.format(args.depth)):
+                os.mkdir('/shared/hj14/tiny-imagenet/ckpt-resnet-{0}'.format(args.depth))    
+            torch.save(state, '/shared/hj14/tiny-imagenet/ckpt-resnet-{0}/ckpt-{1}.pth'.format(args.depth,epoch))
 
         else:
             for batch_idx, (inputs, targets) in enumerate(testloader):
