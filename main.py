@@ -58,13 +58,13 @@ print('==> Building model..')
 # net = VGG('VGG19')
 # net = ResNet18()
 if args.depth == 20:
-    net = ResNet20()    #test accuracy: 91.66%
+    net = ResNet20()    #test accuracy: 91.66%/94.83%
 elif args.depth == 32:
-    net = ResNet32()    #test accuracy: 92.68%
+    net = ResNet32()    #test accuracy: 92.68%/95.15%
 elif args.depth == 44:
-    net = ResNet44()    #test accuracy: 92.92%
+    net = ResNet44()    #test accuracy: 92.92%/
 elif args.depth == 56:
-    net = ResNet56()    #test accuracy: 93.49%
+    net = ResNet56()    #test accuracy: 93.49%/94.73%
 else:
     print ("wrong depth")
 # net = PreActResNet18()
