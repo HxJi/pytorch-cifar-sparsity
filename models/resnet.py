@@ -31,9 +31,11 @@ class BasicBlock(nn.Module):
 
     def forward(self, x):
         out = F.relu(self.bn1(self.conv1(x)))
+        print(1-torch.nonzero(out).size(0)/torch.numel(out))
         out = self.bn2(self.conv2(out))
         out += self.shortcut(x)
         out = F.relu(out)
+        print(1-torch.nonzero(out).size(0)/torch.numel(out))
         return out
 
 
@@ -102,7 +104,7 @@ def ResNet18():
     return ResNet(BasicBlock, [2,2,2,2])
 
 def ResNet34():
-    return ResNet(BasicBlock, [3,4,6,3])
+    return ResNet(BasicBlock, [3,4,6,3]) #95.23%
 
 def ResNet50():
     return ResNet(Bottleneck, [3,4,6,3])
