@@ -121,7 +121,7 @@ class ResNet(nn.Module):
 #     return ResNet(BasicBlock, [200,200,200])
 
 def ResNet18():
-    return ResNet(BasicBlock, [2,2,2,2])
+    return ResNet(BasicBlock, [2,2,2,2]) #56.490%
 
 def ResNet34():
     return ResNet(BasicBlock, [3,4,6,3])
