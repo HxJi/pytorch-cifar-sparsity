@@ -57,14 +57,16 @@ classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship'
 print('==> Building model..')
 # net = VGG('VGG19')
 # net = ResNet18()
-if args.depth == 20:
-    net = ResNet20()
-elif args.depth == 32:
-    net = ResNet32()
-elif args.depth == 44:
-    net = ResNet44()
-elif args.depth == 56:
-    net = ResNet56()    #93.72%
+if args.depth == 18:
+    net = ResNet18()
+elif args.depth == 34:
+    net = ResNet34()
+elif args.depth == 50:
+    net = ResNet50()
+elif args.depth == 101:
+    net = ResNet101()  
+elif args.depth == 152:
+    net = ResNet152()  
 else:
     print ("wrong depth")
 # net = PreActResNet18()
